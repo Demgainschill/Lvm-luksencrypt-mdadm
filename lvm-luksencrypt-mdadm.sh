@@ -24,14 +24,67 @@ if [[ $noofdevices -eq 1 ]]; then
 
 raid_array="/dev/md0"
 
+mountquestion(){
+	lvthinfs=$1
+	fstype=$2
+	read -p 'Would you like to mount the lvthin filesystem to /mnt mount point :' yorn
+	if [[ $yorn =~ 'y' ]]; then
+		echo "Attempting to mount $lvthinfs to /mnt "
+		mount $lvthinfs /mnt
+		if [[ $? -eq 0 ]]; then
+			echo "$lvthinfs of $fstype filesystem mounted at /mnt !!!"
+		fi
+	else
+		echo "not mounting filesystem $lvthinfs"
+		exit 0
+	fi	
+}
 lvmthinvolCreation(){
 	luksDevice=$1
+	declare -i poolsize
+	declare -i fstype
 	read -p "Name of the vg :" vgname
 	vgcreate $vgname $luksDevice
 	if [[ $? -eq 0 ]]; then
 		if [[ $? -eq 0 ]]; then
 			echo "Finally creating thin lvs"
+			read -p "Name of Thinpool :" poolname
+			read -p "Enter the size of thinpool ex(3)G :" poolsize
+			lvcreate -L "$poolsize"G --thinpool "$poolname" $vgname
+			if [[ $? -eq 0 ]]; then
+				read -p "Enter name of thin volume :" thinvolname
+				read -p "Enter Virtual Size of Thin volume :" virtsize
+				lvcreate -V "$virtsize"G --thin -n $thinvolname $vgname/$poolname
+				if [[ $? -eq 0 ]]; then
+					read -p "Filesystem to format with using mkfs (2),(3),(4){default} :" fstype
+					case $fstype in
+						2)
+							mkfs.ext2 /dev/mapper/$vgname-$thinvolname
+							if [[ $? -eq 0 ]]; then 
+							       mountquestion /dev/mapper/$vgname-$thinvolume ext2 
+							fi
+							;;
+						3)
+							mkfs.ext3 /dev/mapper/$vgname-$thinvolname
+							if [[ $? -eq 0 ]]; then
+								mountquestion /dev/mapper/$vgname-$thinvolume ext3
+							fi
+							;;
+						4)
+							mkfs.ext4 /dev/mapper/$vgname-$thinvolname
+							if [[ $? -eq 0 ]]; then
+								mountquestion /dev/mapper/$vgname-$thinvolume ext4
+							fi
+							;;
+						*)
+							echo "Invalid fstype (2/3/4)"
+							exit 1
+							;;
+					esac
+
+				fi
 				
+			fi
 		fi
 	else
 		echo "Vg already exists errors. Exiting..."
@@ -106,9 +159,10 @@ while getopts ":hd:" OPTS; do
 			
 			mdadmRaidCreation $raidlevel $noofdevices
 			
-				
+			exit 0		
 			;;
 		h)
+			
 			usage
 			exit 0
 			;;
