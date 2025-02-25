@@ -10,35 +10,49 @@ EOF
 }
 declare -a devices
 
-deviceChecker(){
-	device=$1
+getRaidLevel(){
+if [[ $noofdevices -eq 1 ]]; then
+				echo "No raid for 1 device. Exiting..."
+				exit 1 	
+			elif [[ $noofdevices -eq 2 ]]; then
+				echo "mirroring"
+			elif [[ $noofdevices -ge 3 ]]; then
+				echo "striping with parity raid5"
+			fi
 
-	if [[ -e $device ]]; then
-		return 0
-	else
-		echo "Not a file. Rerun with existing block devices"
-		exit 1
-	fi
+}
+
+mdadmRaidCreation(){
+	declare -a devices
+	raidlevel=$2
+	devices=$1
+
+	echo ${devices[@]}
 }
 
 while getopts ":hd:" OPTS; do
 	case "$OPTS" in
-		d)	
-			
-			devices+=("${OPTARG}")
-			if [[ ! -n "$devices" ]]; then 
-				echo "No devices specified"
-				exit 1
-				
-			fi
+		d)
+			noofdevices=0
+			devices+=($OPTARG)
 			for device in ${devices[@]}; do
-				echo $device
-				deviceChecker $device
-				if [[ $? -eq 0 ]]; then
-					echo "Executing next step..."
-					
+				if [[ -e $device ]]; then
+					((noofdevices++))
+					devices_list+=(${device})
+				else
+					echo "Not a device exiting"
+					exit 1
 				fi
 			done
+			echo "Number of devices $noofdevices"
+			echo ${devices_list[@]}
+			
+			raidlevel=$(getRaidLevel $noofdevices)
+			echo $raidlevel
+			
+			mdadmRaidCreation ${devices_list[@]} $raidlevel	
+			
+			
 			;;
 		h)
 			usage
@@ -65,8 +79,8 @@ fi
 
 shift $((OPTIND-1))
 
-#if [[ $# -ge 1 ]]; then
-#	echo "Too many arguments exiting"
-#	usage
-#	exit 1
-#fi
+if [[ $# -ge 1 ]]; then
+	echo "Too many arguments exiting"
+	usage
+	exit 1
+fi
