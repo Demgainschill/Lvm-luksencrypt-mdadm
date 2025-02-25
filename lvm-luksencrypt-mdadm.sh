@@ -5,7 +5,7 @@ usage(){
 	usage: ./lvm-luksencrypt-mdadm.sh 
 
 		-h : help section
-		-d : Partions or devices to be converted (format: -d /dev/sda /dev/sdb | -d /dev/sda1 /dev/sdb2 )
+		-d : Partions or devices to be converted (format: -d "/dev/sda /dev/sdb" | -d "/dev/sda1 /dev/sdb2" )
 EOF
 }
 declare -a devices
@@ -49,8 +49,7 @@ lvmthinvolCreation(){
 		if [[ $? -eq 0 ]]; then
 			echo "Finally creating thin lvs"
 			read -p "Name of Thinpool :" poolname
-			read -p "Enter the size of thinpool ex(3)G :" poolsize
-			lvcreate -L "$poolsize"G --thinpool "$poolname" $vgname
+			lvcreate -l 100%FREE --thinpool "$poolname" $vgname
 			if [[ $? -eq 0 ]]; then
 				read -p "Enter name of thin volume :" thinvolname
 				read -p "Enter Virtual Size of Thin volume :" virtsize
@@ -61,19 +60,19 @@ lvmthinvolCreation(){
 						2)
 							mkfs.ext2 /dev/mapper/$vgname-$thinvolname
 							if [[ $? -eq 0 ]]; then 
-							       mountquestion /dev/mapper/$vgname-$thinvolume ext2 
+							       mountquestion /dev/mapper/$vgname-$thinvolname ext2 
 							fi
 							;;
 						3)
 							mkfs.ext3 /dev/mapper/$vgname-$thinvolname
 							if [[ $? -eq 0 ]]; then
-								mountquestion /dev/mapper/$vgname-$thinvolume ext3
+								mountquestion /dev/mapper/$vgname-$thinvolname ext3
 							fi
 							;;
 						4)
 							mkfs.ext4 /dev/mapper/$vgname-$thinvolname
 							if [[ $? -eq 0 ]]; then
-								mountquestion /dev/mapper/$vgname-$thinvolume ext4
+								mountquestion /dev/mapper/$vgname-$thinvolname ext4
 							fi
 							;;
 						*)
